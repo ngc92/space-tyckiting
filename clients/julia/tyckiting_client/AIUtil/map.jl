@@ -7,7 +7,7 @@ type Map
   radius::Int
 end
 
-radius(m::Map) = m.radius
+world_radius(m::Map) = m.radius
 
 function Map(T::DataType, size::Integer, init = zero(T))
   diameter = 2size + 1

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-using ArgParse
 import JSON
 
 include("ClientAI/ClientAI.jl")
@@ -7,32 +5,6 @@ using ClientAI
 
 include("messages.jl")
 include("websocket.jl")
-
-function main()
-    # Main method for running the client. Reads configuration from command line,
-    # and starts the client.
-    s = ArgParseSettings(description="Destroy 'em all")
-    @add_arg_table s begin
-      "--host", "-H"
-        default="localhost"
-        help="Host to connect to"
-      "--port", "-P"
-        default=3000
-        arg_type=Int
-        help="Port to connect to"
-      "--verbose", "-v"
-        action=:store_true
-        help="Verbose output"
-      "--name", "-n"
-        default="bot"
-        help="Bot's name"
-      "--ai", "-a"
-        default="dummy"
-        help="Ai package"
-    end
-
-    args = parse_args(s)
-end
 
 type TykitingClient
   host::ASCIIString
@@ -45,7 +17,7 @@ type TykitingClient
   socket
   function TykitingClient(host="localhost", port=3000, name="bot", ai="ngcbot")
     # load the ai script
-    ai_source = "ai/"*ai*".jl"
+    ai_source = "tyckiting_client/ai/"*ai*".jl"
     # check already here, that the file exists
     @assert isfile(ai_source)
     ai_module = nothing
@@ -131,10 +103,3 @@ function send(client::TykitingClient, data::Dict)
   WebSock.send(client.socket, js)
 end
 close(client::TykitingClient) = WebSock.close(client.socket)
-
-function start_client(debug = false)
-  client = TykitingClient("localhost", 3000)
-  run(client, debug)
-end
-
-start_client()

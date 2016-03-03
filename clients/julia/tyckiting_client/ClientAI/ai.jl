@@ -4,7 +4,21 @@ function move(ai::AbstractAI, bots::Vector{AbstractBot}, events::Vector{Abstract
   error("method move not found for $(typeof(ai)). Be sure to import it!")
 end
 
-# default event handlers: warn for important events that they are missed
-on_event(ai::AbstractAI, event::AbstractEvent) = warn("Event of type $(typeof(event)) not processed by $(typeof(ai))!")
-on_event(ai::AbstractAI, event::NoActionEvent) = warn("Bot $(botid(event)) dit not act last round!")
-on_event(ai::AbstractAI, event::MoveEvent) = false
+# event dispatcher loop
+function event_dispatch(ai::AbstractAI, events::Vector{AbstractEvent})
+  for event in events
+    on_event(ai, event)
+  end
+end
+
+
+# default event handlers: warn for important events that they are missed.
+function on_event(ai::AbstractAI, event::AbstractEvent)
+  if typeof(event) == NoActionEvent
+     warn("Bot $(botid(event)) did not act last round!")
+  elseif typeof(event) == MoveEvent
+    # nothing happens
+  else
+    warn("Event of type $(typeof(event)) not processed by $(typeof(ai))! Implement ClientAI.on_event")
+  end
+end

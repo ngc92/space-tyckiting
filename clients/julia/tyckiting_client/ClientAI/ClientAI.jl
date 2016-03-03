@@ -23,7 +23,7 @@ module ClientAI
 	export to_dict, MoveAction, RadarAction, CannonAction, move
 
   # event types
-  export HitEvent, DeathEvent, SightEvent, RadarEvent, DetectionEvent, DamageEvent, MoveEvent, NoActionEvent, on_event
+  export HitEvent, DeathEvent, SightEvent, RadarEvent, DetectionEvent, DamageEvent, MoveEvent, NoActionEvent, on_event, event_dispatch
 
   # bot functions
   export is_alive, team, botid, name, position, hitpoints, make_action

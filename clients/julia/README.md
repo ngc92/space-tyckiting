@@ -11,7 +11,7 @@
 julia ./setup.jl
 
 # Run
-python ./cli.jl
+julia ./cli.jl
 ```
 
 ## Prerequisites

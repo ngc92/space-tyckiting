@@ -26,7 +26,10 @@ type TykitingClient
     # ensure compilation of the bot functions
     dummy = ai_module.create(0, Config())
     info("running bot in dummy computation to compile")
-    @time ai_module.move(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[])
+    @time begin
+      event_dispatch(dummy, AbstractEvent[])
+      ai_module.move(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[])
+    end
 
     new(host, port, name, ai_source, nothing, ai_module, 0, nothing)
   end
@@ -49,8 +52,10 @@ end
 function on_events(client::TykitingClient, message::EventsMsg)
   info("Round $(message.round_id)")
   responses = Any[]
-  try
-    @time responses = client.ai_module.move(get(client.ai), message.you.bots, message.events)
+  @time try
+    # event dispatcher loop
+    event_dispatch(get(client.ai), message.events)
+    responses = client.ai_module.move(get(client.ai), message.you.bots, message.events)
   catch e
     println(e)
     Base.show_backtrace(STDOUT, catch_backtrace())

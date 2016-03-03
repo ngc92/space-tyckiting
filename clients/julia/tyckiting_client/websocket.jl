@@ -9,9 +9,7 @@ type WebSocketClient
   debug::Bool
 end
 
-on_ws_open(ws) = info("WebSocket connection opened")
 on_ws_error(ws, error) = error("WebSocket connection error $error")
-on_ws_close(ws) = info("WebSocket connection closed")
 
 # socket wrappers
 function close(client::WebSocketClient)
@@ -37,10 +35,8 @@ function WebSocketClient(host, port, handler::Function; debug = false)
   url = "ws://$host:$port/"
   info("Connecting to $url")
   client = WebSocketClient(nothing, handler, debug)
-  client.socket = websocket.WebSocketApp(url,  on_open    = on_ws_open,
-                                  on_message = (ws, ms)->on_ws_message(client, ms, ),
-                                  on_error   = on_ws_error,
-                                  on_close   = on_ws_close)
+  client.socket = websocket.WebSocketApp(url, on_message = (ws, ms)->on_ws_message(client, ms, ),
+										 on_error   = on_ws_error)
   return client
 end
 

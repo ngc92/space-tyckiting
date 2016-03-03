@@ -28,14 +28,13 @@ function main()
   end
 
   global args = parse_args(s)
-
-  client = TykitingClient(args["host"], args["port"], args["name"], args["ai"])
-  run(client, args["verbose"])
+  start_client()
 end
 
-function restart()
+function start_client()
+  global args
   client = TykitingClient(args["host"], args["port"], args["name"], args["ai"])
-  run(client, args["verbose"])
+  @sync run(client, args["verbose"])
 end
 
 main()

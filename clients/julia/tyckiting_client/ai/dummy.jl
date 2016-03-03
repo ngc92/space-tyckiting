@@ -8,13 +8,15 @@ using .AIUtil
 
 type DummyAI <: AbstractAI
   config::Config
+  bots::Vector{AbstractBot}
 end
 
-function move(ai::DummyAI, bots::Vector{AbstractBot}, events::Vector{AbstractEvent})
-  # this funtion calls on_event for all events in the list
-  event_dispatch(ai, events)
+function init_round(ai::DummyAI, bots::Vector{AbstractBot}, events::Vector{AbstractEvent}, round_id::Integer)
+  ai.bots = bots
+end
 
-  bots = filter_valid(bots)
+function decide(ai::DummyAI)
+  bots = filter_valid(ai.bots)
   actions = AbstractAction[]
   for b in bots
     push!(actions, MoveAction(botid(b), rand(get_move_area(b, ai.config))))
@@ -28,7 +30,7 @@ ClientAI.on_event(ai::DummyAI, event::AbstractEvent) = false
 # this function is called from main to create the AI
 function create(team_id, config::Config)
 	info("create ai $team_id")
-	return DummyAI(config)
+	return DummyAI(config, AbstractBot[])
 end
 
 end

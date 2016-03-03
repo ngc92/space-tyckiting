@@ -27,8 +27,9 @@ type TykitingClient
     dummy = ai_module.create(0, Config())
     info("running bot in dummy computation to compile")
     @time begin
+      ai_module.init_round(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[], 0)
       event_dispatch(dummy, AbstractEvent[])
-      ai_module.move(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[])
+      ai_module.decide(dummy)
     end
 
     new(host, port, name, ai_source, nothing, ai_module, 0, nothing)
@@ -52,14 +53,20 @@ end
 function on_events(client::TykitingClient, message::EventsMsg)
   info("Round $(message.round_id)")
   responses = Any[]
-  @time try
+  timing = @elapsed try
     # event dispatcher loop
+    client.ai_module.init_round(get(client.ai), message.you.bots, message.events, message.round_id)
     event_dispatch(get(client.ai), message.events)
-    responses = client.ai_module.move(get(client.ai), message.you.bots, message.events)
+    responses = client.ai_module.decide(get(client.ai))
   catch e
     println(e)
     Base.show_backtrace(STDOUT, catch_backtrace())
   end
+
+  if timing > 0.2
+    warn("Computation took longer than 200ms ($(Int(1000*timing))). Limit: 300ms!")
+  end
+
   actions = Dict("type" => "actions", "roundId" => message.round_id, "actions" => map(to_dict, responses))
   send(client, actions)
 end

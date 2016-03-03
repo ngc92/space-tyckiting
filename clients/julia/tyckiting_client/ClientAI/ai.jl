@@ -1,9 +1,5 @@
 abstract AbstractAI
 
-function move(ai::AbstractAI, bots::Vector{AbstractBot}, events::Vector{AbstractEvent})
-  error("method move not found for $(typeof(ai)). Be sure to import it!")
-end
-
 # event dispatcher loop
 function event_dispatch(ai::AbstractAI, events::Vector{AbstractEvent})
   for event in events

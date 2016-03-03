@@ -29,8 +29,13 @@ There is a dummy AIs available in `tyckiting_client/ai/` folder that can be used
  2. Implement behaviour in the `move()` method.
  3. Run your custom AI with `julia ./cli.jl --ai your_ai`
 
-
+For testing the AI, it might be helpful to start cli.jl in a julia interpreter and then just call 
+the start_client() function to avoid the startup time of the julia interpreter.
 
 ## Testing
 
 Currently there are no tests defined.
+
+
+## Known issues
+Crashes when the game ends :(

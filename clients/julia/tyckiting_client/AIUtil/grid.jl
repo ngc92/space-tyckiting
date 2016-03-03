@@ -8,7 +8,6 @@
 #####################################################
 
 world_radius(i) = i
-world_radius(m::AbstractMap) = radius(m)
 world_radius(c::Config) = c.field_radius
 
 # generate all position in hexagonal neighbourhood of certain radius. Does not check if these positions are valid

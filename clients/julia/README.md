@@ -6,14 +6,12 @@
 
 ## Synopsis
 
-requires the following julia packages
 ```sh
 # install julia packages
-Pkg.add("JSON")
-Pkg.add("PyCall")
+julia ./setup.jl
 
 # Run
-python ./cli.py
+python ./cli.jl
 ```
 
 ## Prerequisites
@@ -29,7 +27,7 @@ installing instructions for the python client for further information.
 There is a dummy AIs available in `tyckiting_client/ai/` folder that can be used as a template.
  1. Copy `dummy.jl` to `your_ai.jl`
  2. Implement behaviour in the `move()` method.
- 3. Run your custom AI with `python ./cli --ai your_ai`
+ 3. Run your custom AI with `julia ./cli.jl --ai your_ai`
 
 
 

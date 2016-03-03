@@ -35,7 +35,7 @@ setindex!(m::Map, value, p::Position) = setindex!(m, value, round(Int, p.x), rou
 # get/set multiple values at once
 # TODO find a way to do that with [] operations
 function get_map_values(m::Map, multi)
-  return [m[i] for i in mulit]
+  return [m[i] for i in multi]
 end
 
 function set_map_values!(m::Map, value, multi)

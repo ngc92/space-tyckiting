@@ -1,43 +1,5 @@
 abstract AbstractMap
 
-#####################################################
-# internal helper functions
-#####################################################
-
-world_radius(i) = i
-world_radius(m::AbstractMap) = radius(m)
-world_radius(c::Config) = c.field_radius
-
-# generate all position in hexagonal neighbourhood of certain radius. Does not check if these positions are valid
-function pos_in_range_unchecked(x::Integer, y::Integer, radius::Integer)
-  positions = Position[]
-  for dx in -radius:radius
-    append!(positions, [Position(x + dx, y + dy) for dy in max(-radius, -dx-radius):min(radius, -dx+radius)])
-  end
-  return positions
-end
-pos_in_range_unchecked(p::Position, rad::Integer) = pos_in_range_unchecked(p.x, p.y, rad)
-
-# check if position is within playing field
-function is_valid_pos(p::Position, radius)
-  field = world_radius(radius)
-  return -field <= p.x <=field && max(-field, -p.x-field) <= p.y <= min(field, -p.x+field)
-end
-filter_valid(positions, field) = filter(x->is_valid_pos(x, field), positions)
-
-############################################################
-#  interface functions
-############################################################
-
-# convenience functions for bots: get fields that an be seen, and fields that can be reached by movement
-get_map(world) = pos_in_range_unchecked(0,0, world_radius(world))
-
-pos_in_range(origin,  radius, world)  = filter_valid( pos_in_range_unchecked(position(origin), radius), world_radius(world))
-get_view_area(origin,  config::Config) = pos_in_range(origin, config.see,   config)
-get_radar_area(origin, config::Config) = pos_in_range(origin, config.radar, config)
-get_move_area(origin,  config::Config) = pos_in_range(origin, config.move,  config)
-get_damage_area(center,  config::Config) = pos_in_range(center, config.cannon,  config)
-
 # helper data type that contains a map of the world
 
 type Map
@@ -58,17 +20,30 @@ end
 ##################################################
 
 # allow direct indexing of underlying matrix
-function getindex(m::Map, x, y)
+function getindex(m::Map, x::Integer, y::Integer)
   return m.data[x + m.radius + 1, y + m.radius + 1]
 end
 
-function setindex!(m::Map, v, x, y)
+function setindex!(m::Map, v, x::Integer, y::Integer)
   m.data[x + m.radius + 1, y + m.radius + 1] = v
 end
 
 # or index with Position type
 getindex(m::Map, p::Position) = getindex(m, round(Int, p.x), round(Int, p.y))
 setindex!(m::Map, value, p::Position) = setindex!(m, value, round(Int, p.x), round(Int, p.y))
+
+# get/set multiple values at once
+# TODO find a way to do that with [] operations
+function get_map_values(m::Map, multi)
+  return [m[i] for i in mulit]
+end
+
+function set_map_values!(m::Map, value, multi)
+  for i in multi
+    m[i] = value
+  end
+end
+
 
 fill!(m::Map, v) = fill!(m.data, v)
 
@@ -95,9 +70,7 @@ function visualize(m::Map; vis = x->x)
     cp = hex2cart(p.x, p.y, m.radius)
     cp = round(Int, scale * cp)
     v = vis(m[p])
-    for x in 0:scale-1, y in 0:scale-1
-      image[cp[1]+x, cp[2]+y] = v
-    end
+    image[cp[1]:cp[1]+scale-1, cp[2]:cp[2]+scale-1] = v
   end
   return image
 end

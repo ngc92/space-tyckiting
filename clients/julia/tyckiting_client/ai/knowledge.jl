@@ -10,7 +10,7 @@ function normalize!(m::Map, norm::Real, absolute::Bool = true)
   else
     factor = (total + norm) / total
   end
-  m .*= factor
+  m.data .*= factor
 end
 
 function mark_no_enemy(ai::NGCBot, bots::Vector, radars::Vector, shots::Vector)

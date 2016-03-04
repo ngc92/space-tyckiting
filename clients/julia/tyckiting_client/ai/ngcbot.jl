@@ -34,20 +34,21 @@ function decide(ai::NGCBot)
   bots = filter_valid(ai.own_bots)
   attack_map = diffuse_probability(ai.knowledge_map, ai.config)
 
+  targets = get_shoot_targets(attack_map, ai.config, bots)
+  scans = get_radar_targets(attack_map, ai.config)
+
   actions = AbstractAction[]
   for b in bots
     curthreat = get_threat_level(b, ai.enemy_knowledge_map, ai.config)
     mpos = get_move_area(b, ai.config)
     moves = plan_actions("move", mpos, zeros(size(mpos)))
-    targets = get_shoot_targets(attack_map, ai.config, bots)
-    scans = get_radar_targets(attack_map, ai.config)
 
     # correct for threat
-    targets = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), targets)
-    scans = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), scans)
-    moves = map(t->ActionPlan(t.name, t.pos, t.weight - get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(t))), moves)
+    targets_c = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), targets)
+    scans_c = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), scans)
+    moves_c = map(t->ActionPlan(t.name, t.pos, t.weight - get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(t))), moves)
 
-    action = sample_action(vcat(targets, scans, moves), 20.0)
+    action = sample_action(vcat(targets_c, scans_c, moves_c), 20.0)
     println(name(action), " @ ", action.weight)
     push!(actions, make_action(action, b))
   end
@@ -59,14 +60,24 @@ function decide(ai::NGCBot)
 
   # debugging
   # predict enemy movement
-  vs = visualize(attack_map)
+  # THIS debugging can take up around 100 ms or so.
+  drawer = HexDrawer(400, attack_map.radius)
+  draw(drawer, attack_map, sqrt)
   # mark shots on the map
   for s in ai.last_actions.shots
-    vs[round(Int, 10*hex2cart(s.x, s.y, ai.config.field_radius))...] = 1
+    mask = ones(Bool, 4, 4)
+    draw(drawer, s, mask, Float64[1,0,0])
   end
-  save("map$(ai.turn_counter).png", grayim(min(1, sqrt(vs))))
-  vs = visualize(ai.enemy_knowledge_map)
-  save("emap$(ai.turn_counter).png", grayim(min(1, sqrt(vs))))
+  for s in ai.last_actions.scans
+    mask = ones(Bool, 4, 4)
+    draw(drawer, s, mask, Float64[0,0,1])
+  end
+  for b in bots
+    mask = ones(Bool, 4, 4)
+    draw(drawer, position(b), mask, Float64[0,1,0])
+  end
+  save("debug/map$(ai.turn_counter).png", colorim(get_image(drawer)))
+  e
 
 	return actions
 end
@@ -178,6 +189,12 @@ function create(team_id, config::Config)
   for i in 1:10
     diffuse_probability(m, config)
   end
+
+  # clear debug data
+  if isdir("debug")
+    rm("debug", recursive = true)
+  end
+  mkdir("debug")
 
 	return NGCBot(config, m, deepcopy(m), Any[], ActionMemory(), 0)
 end

@@ -47,36 +47,6 @@ end
 
 fill!(m::Map, v) = fill!(m.data, v)
 
-##################################################
-#          visualization helper
-##################################################
-function hex2cart(u, v, radius)
-  v1 = [0, 1]
-  v2 = [sind(60), cosd(60)]
-  return v1 * (u + radius + 1) + v2 * (v + radius + 1)
-end
-
-function visualize(m::Map; vis = x->x)
-  scale = 10
-  v1 = [0, 1]
-  v2 = [sind(60), cosd(60)]
-  mx = round(Int, scale * hex2cart(m.radius, m.radius, m.radius))
-
-  image = zeros((mx+scale)...)
-
-  # converts to a cartesion map
-  positions = get_map(m.radius)
-  for p in positions
-    cp = hex2cart(p.x, p.y, m.radius)
-    cp = round(Int, scale * cp)
-    v = vis(m[p])
-    image[cp[1]:cp[1]+scale-1, cp[2]:cp[2]+scale-1] = v
-  end
-  return image
-end
-
-
-
 function diffuse(map::Map, kernel::Function, D::Real = 1)
   # kernel will be called for each position and should return a collection of target positions
   # to spread to

@@ -21,10 +21,11 @@ end
 pos_in_range_unchecked(p::Position, rad::Integer) = pos_in_range_unchecked(p.x, p.y, rad)
 
 # check if position is within playing field
-function is_valid_pos(p::Position, radius)
+function is_valid_pos(x::Integer, y::Integer, radius)
   field = world_radius(radius)
-  return -field <= p.x <=field && max(-field, -p.x-field) <= p.y <= min(field, -p.x+field)
+  return -field <= x <=field && max(-field, -x-field) <= y <= min(field, -x+field)
 end
+is_valid_pos(p::Position, radius) = is_valid_pos(p.x, p.y, radius)
 filter_valid(positions, field) = filter(x->is_valid_pos(x, field), positions)
 
 ############################################################

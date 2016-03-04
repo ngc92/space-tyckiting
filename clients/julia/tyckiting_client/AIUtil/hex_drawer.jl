@@ -79,8 +79,18 @@ function draw(drawer::HexDrawer, pos::Position, color::Vector)
   cx, cy = hex2cart(drawer, pos.x, pos.y)
   x = round(Int, cx)
   y = round(Int, cy)
-  println(pos.x, " ", pos.y, " ", x, " ", y)
   drawer.image[x, y, :] = color
+end
+
+function draw(drawer::HexDrawer, pos::Position, mask::Matrix{Bool}, color::Vector)
+  cx, cy = hex2cart(drawer, pos.x, pos.y)
+  x = round(Int, cx - size(mask, 1) / 2)
+  y = round(Int, cy - size(mask, 1) / 2)
+  for dx in 1:size(mask, 1), dy in 1:size(mask, 2)
+    if mask[dx, dy]
+      drawer.image[x+dx, y+dy, :] = color
+    end
+  end
 end
 
 function get_image(d::HexDrawer)

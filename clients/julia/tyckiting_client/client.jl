@@ -62,9 +62,8 @@ function on_events(client::TykitingClient, message::EventsMsg)
     println(e)
     Base.show_backtrace(STDOUT, catch_backtrace())
   end
-
   if timing > 0.2
-    warn("Computation took longer than 200ms ($(Int(1000*timing))). Limit: 300ms!")
+    warn("Computation took longer than 200ms ($(round(Int, 1000*timing))). Limit: 300ms!")
   end
 
   actions = Dict("type" => "actions", "roundId" => message.round_id, "actions" => map(to_dict, responses))

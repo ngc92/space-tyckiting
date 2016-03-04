@@ -6,17 +6,17 @@ import ClientAI: on_event
 include("../AIUtil/AIUtil.jl")
 using .AIUtil
 
+include("knowledge.jl")
+
 type NGCBot <: AbstractAI
   config::Config
-  knowledge_map::Map          # what do we know about enemy positions
-  enemy_knowledge_map::Map    # what we expect the enemy knows about us
+  knowledge_map::ShipTrackMap          # what do we know about enemy positions
+  enemy_knowledge_map::ShipTrackMap    # what we expect the enemy knows about us
   own_bots::Vector
 
   last_actions::ActionMemory
   turn_counter::Integer
 end
-
-include("knowledge.jl")
 
 const RADAR_DISCOUNT_FACTOR = 0.5 * 0.75
 
@@ -24,18 +24,38 @@ function init_round(ai::NGCBot, bots::Vector{AbstractBot}, events::Vector{Abstra
   ai.own_bots = bots
   ai.turn_counter = round_id
 
+  # TODO: find out if bot actions were ignored.
   # mark on the map all positions where we would have detected an enemy if there were one
   # as enemy free. The found enemies are then set during the event dispatch.
-  mark_no_enemy(ai, filter_valid(bots), ai.last_actions)
+  for b in filter_valid(bots)
+    mark_scan!(ai.knowledge_map, get_view_area(b, ai.config))
+  end
 
+  for r in ai.last_actions.scans
+    mark_scan!(ai.knowledge_map, get_radar_area(r, ai.config))
+  end
+
+  for s in ai.last_actions.shots
+    mark_scan!(ai.knowledge_map, get_damage_area(s, ai.config))
+  end
 end
 
 function decide(ai::NGCBot)
   bots = filter_valid(ai.own_bots)
-  attack_map = diffuse_probability(ai.knowledge_map, ai.config)
+  # OK, at this point all events and old info has been processed, so we can update our knowledge
+  update!(ai.knowledge_map)
+  update!(ai.enemy_knowledge_map)
+
+  attack_map = estimate_movement(ai.knowledge_map)
+  # info for radaring: we can exclude positions that we will
+  # be revealed by the position of our ships
+  radar_map = deepcopy(attack_map)
+  for b in bots
+    mark_scan!(radar_map, get_view_area(b, ai.config))
+  end
 
   targets = get_shoot_targets(attack_map, ai.config, bots)
-  scans = get_radar_targets(attack_map, ai.config)
+  scans = get_radar_targets(radar_map, ai.config)
 
   actions = AbstractAction[]
   for b in bots
@@ -44,11 +64,18 @@ function decide(ai::NGCBot)
     moves = plan_actions("move", mpos, zeros(size(mpos)))
 
     # correct for threat
-    targets_c = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), targets)
-    scans_c = map(t->ActionPlan(t.name, t.pos, t.weight - curthreat), scans)
-    moves_c = map(t->ActionPlan(t.name, t.pos, t.weight - get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(t))), moves)
+    targets_c = best_actions(plan_actions(targets, -curthreat), 5)
+    scans_c = best_actions(plan_actions(scans, -curthreat), 5)
+    threats =  map(x->get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(x)), moves)
+    moves_c = best_actions(plan_actions(moves, -threats), 5)
 
-    action = sample_action(vcat(targets_c, scans_c, moves_c), 20.0)
+    action = sample_action(vcat(targets_c, scans_c, moves_c), 10.0)
+    # update other radar actions after we initialize one, to prevent overlapping
+    # radaring
+    if action.name == "radar"
+      mark_scan!(radar_map, get_view_area(position(action), ai.config))
+      scans = get_radar_targets(radar_map, ai.config)
+    end
     println(name(action), " @ ", action.weight)
     push!(actions, make_action(action, b))
   end
@@ -56,13 +83,16 @@ function decide(ai::NGCBot)
   remember!(ai.last_actions, actions)
 
   ai.knowledge_map = attack_map
-  ai.enemy_knowledge_map = diffuse_probability(ai.enemy_knowledge_map, ai.config)
+  ai.enemy_knowledge_map = estimate_movement(ai.enemy_knowledge_map)
 
   # debugging
   # predict enemy movement
   # THIS debugging can take up around 100 ms or so.
-  drawer = HexDrawer(400, attack_map.radius)
-  draw(drawer, attack_map, sqrt)
+  drawer = HexDrawer(400, attack_map.map.radius)
+  draw(drawer, attack_map.map, sqrt)
+  # TODO best way to incorporate this info?
+  #draw(drawer, ai.enemy_knowledge_map, sqrt, channel=2)
+
   # mark shots on the map
   for s in ai.last_actions.shots
     mask = ones(Bool, 4, 4)
@@ -77,8 +107,6 @@ function decide(ai::NGCBot)
     draw(drawer, position(b), mask, Float64[0,1,0])
   end
   save("debug/map$(ai.turn_counter).png", colorim(get_image(drawer)))
-  e
-
 	return actions
 end
 
@@ -87,12 +115,12 @@ end
 #######################################
 function on_event(ai::NGCBot, event::SightEvent)
   # register a ship detection
-  single_detection!(ai.knowledge_map, position(event))
+  detect_ship!(ai.knowledge_map, position(event), botid(event))
 end
 
 function on_event(ai::NGCBot, event::RadarEvent)
   # register a ship detection
-  single_detection!(ai.knowledge_map, position(event))
+  detect_ship!(ai.knowledge_map, position(event))
 end
 
 function on_event(ai::NGCBot, event::HitEvent)
@@ -112,13 +140,7 @@ function on_event(ai::NGCBot, event::HitEvent)
   end
   info("enemy bot $victim was hit @ $(aim)!")
 
-  # remove density of total one from the map
-  normalize!(ai.knowledge_map, -1, false)
-
-  damage_area = get_damage_area(aim, ai.config)
-  for p in damage_area
-    ai.knowledge_map[p] += 1 / length(damage_area)
-  end
+  detect_ship_in_area!(ai.knowledge_map, get_damage_area(aim, ai.config))
 end
 
 function on_event(ai::NGCBot, event::DetectionEvent)
@@ -128,7 +150,7 @@ function on_event(ai::NGCBot, event::DetectionEvent)
   pos = position(bot)
   info("own bot $victim was detected @ $pos")
 
-  single_detection!(ai.enemy_knowledge_map, pos)
+  detect_ship!(ai.enemy_knowledge_map, pos, botid(bot))
 end
 
 function on_event(ai::NGCBot, event::DamageEvent)
@@ -137,17 +159,33 @@ function on_event(ai::NGCBot, event::DamageEvent)
   info("Own bot $victim was hit by $(event.damage) @ $(position(bot))!")
 
   # TODO we could estimate the enemies certainty by the damage value
-  single_detection!(ai.enemy_knowledge_map, position(bot))
+  detect_ship!(ai.enemy_knowledge_map, position(bot), botid(bot))
 end
 
-# TODO 0.5 is OK or even high for undetected enemys, but I guess after detection they should move
-# more with D = 1
-diffuse_probability(map::Map, config::Config) = diffuse(map, p->get_move_area(p, config), 0.5)
+function on_event(ai::NGCBot, event::DeathEvent)
+  victim = botid(event)
 
-function get_shoot_targets(emap::Map, config::Config, bots)
-  pos = get_map(emap.radius)
+  # check if it was one of our own
+  bot = filter(b->botid(b) == victim, ai.own_bots)
+  if length(bot) == 1
+    info("Own bot $victim was killed!")
+    return
+  end
+
+  # otherwise, we killed an enemy
+  shots = ai.last_actions.shots
+  if length(shots) > 0
+    notify_kill!(ai.knowledge_map, shots)
+    info("killed enemy bot $(victim)!")
+  else
+    warn("Killed an enemy, but did not shoot. Something fishy here!")
+  end
+end
+
+function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)
+  pos = get_map(emap.map.radius)
   # TODO we need to weight this here, actually
-  total_hit = gather(emap, p->get_damage_area(p, config))
+  total_hit = gather(emap.map, p->get_damage_area(p, config))
   # take into account both direct damage value (1) and detection (RADAR_DISCOUNT_FACTOR),
   # but detection is imprecise, so reduce its weight
   SHOOT_FACTOR = (1 + RADAR_DISCOUNT_FACTOR / 2)
@@ -165,30 +203,23 @@ function get_shoot_targets(emap::Map, config::Config, bots)
   return plan_actions("cannon", pos, weights)
 end
 
-function get_radar_targets(emap::Map, config::Config)
-  pos = get_map(emap.radius)
+function get_radar_targets(emap::ShipTrackMap, config::Config)
+  pos = get_map(emap.map.radius)
   # this gives the certainty with which we assume that an enemy is somewhere
   # inside the radar territority.
-  total_hit = gather(emap, p->get_radar_area(p, config))
+  total_hit = gather(emap.map, p->get_radar_area(p, config))
   weights = Float64[total_hit[p] for p in pos] .* RADAR_DISCOUNT_FACTOR
   return plan_actions("radar", pos, weights)
 end
 
-function get_threat_level(bot::AbstractBot, knowledge::Map, config::Config, pos::Position = position(bot))
+function get_threat_level(bot::AbstractBot, knowledge::ShipTrackMap, config::Config, pos::Position = position(bot))
   area = get_damage_area(pos, config)
-  return mapreduce(p->knowledge[p], +, area)
+  return mapreduce(p->knowledge.map[p], +, area)
 end
 
 
 function create(team_id, config::Config)
 	info("create ngcbot for team $team_id")
-  fieldcount = length(get_map(config))
-  m = Map(Float64, config.field_radius, config.bots / fieldcount)
-
-  # iterate a few times to find equilibrium
-  for i in 1:10
-    diffuse_probability(m, config)
-  end
 
   # clear debug data
   if isdir("debug")
@@ -196,6 +227,6 @@ function create(team_id, config::Config)
   end
   mkdir("debug")
 
-	return NGCBot(config, m, deepcopy(m), Any[], ActionMemory(), 0)
+	return NGCBot(config,ShipTrackMap(config), ShipTrackMap(config), Any[], ActionMemory(), 0)
 end
 end

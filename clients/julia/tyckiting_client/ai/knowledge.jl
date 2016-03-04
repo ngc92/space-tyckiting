@@ -1,35 +1,100 @@
-# this file contains functions and types related to the knwoledge gathering process of ngcbot
+# track the movement of ships based on partial knowledge
+type ShipTrackMap
+  config::Config
+  map::Map
+  ship_count::Int
+end
 
-mark_no_enemy(m::Map, positions) = set_map_values!(m, 0, positions)
+const DIFFUSION_COEFFICIENT = 0.5
+
+function ShipTrackMap(config::Config)
+  fieldcount = length(get_map(config))
+  m = Map(Float64, config.field_radius, config.bots / fieldcount)
+  # iterate a few times to find equilibrium
+  for i in 1:20
+    diffuse(m, p->get_move_area(p, config), DIFFUSION_COEFFICIENT)
+  end
+  return ShipTrackMap(config, m, config.bots)
+end
+
+# call this function to signal that the given area was scanned
+# (i.e. either radared or seen).
+function mark_scan!(track::ShipTrackMap, area)
+  set_map_values!(track.map, 0, area)
+end
+
+# call this function if you want to signalize that a ship was
+# definitely detected as position pos. Optionally, add an id
+# to further improve tracking abilities
+function detect_ship!(track::ShipTrackMap, pos, id = -1)
+  single_detection!(track.map, position(pos))
+end
+
+# call this function if you want to signalize that a ship was
+# detected within a certain area. Optionally, add an id
+# to further improve tracking abilitie.
+function detect_ship_in_area!(track::ShipTrackMap, area::Vector, id = -1)
+  normalize!(track.map, -1, false)
+  for p in area
+    track.map[p] += 1 / length(area)
+  end
+end
+
+# call this to signal the knowledge system that a ship has been killed
+# positions is a list of possible positions where the kill could have happened
+function notify_kill!(track::ShipTrackMap, positions::Vector)
+  # expand area to conver
+  area = vcat(map(c->get_damage_area(c, track.config), positions)...)
+
+  if length(area) > 0
+    # probability to remove from each grid position
+    # TODO should do some weighting here
+    reduction = 1 / length(area)
+    for s in area
+      # TODO we need to rework normalization now, as there is one less enemy bot
+      # also, since the coordinate might carry less weight than is to be removed
+      # we should also reduce surrounding prob.
+      track.map[s] = max(0, track.map[s]-reduction)
+    end
+  end
+
+  # one ship less
+  track.ship_count -= 1
+end
+
+# call this function to signal that you are finished adding new information.
+# all cached updates are processed then.
+function update!(track::ShipTrackMap)
+  # renormalize density
+  normalize!(track.map, track.ship_count, true)
+end
+
+# estimate ship positions after one round, and return new ShipTrack object
+function estimate_movement(track::ShipTrackMap)
+  # TODO 0.5 is OK or even high for undetected enemys, but I guess after detection they should move
+  # more with D = 1
+  return ShipTrackMap(track.config, diffuse(track.map, p->get_move_area(p, track.config), DIFFUSION_COEFFICIENT), track.ship_count)
+end
+
+
+
+# helper functions
+
+
 function normalize!(m::Map, norm::Real, absolute::Bool = true)
   # renormalize density
   total = sum(get_map_values(m,  get_map(m.radius)))
+  if total == 0
+    return
+  end
   # TODO we need to fix this; enemy bots may be dead
   if absolute
     factor = norm / total
   else
-    factor = (total + norm) / total
+    factor = max(0, (total + norm) / total)
   end
   m.data .*= factor
 end
-
-function mark_no_enemy(ai::NGCBot, bots::Vector, radars::Vector, shots::Vector)
-  for b in bots
-    mark_no_enemy(ai.knowledge_map, get_view_area(b, ai.config))
-  end
-
-  for r in radars
-    mark_no_enemy(ai.knowledge_map, get_radar_area(r, ai.config))
-  end
-
-  for s in shots
-    mark_no_enemy(ai.knowledge_map, get_damage_area(s, ai.config))
-  end
-
-  # renormalize density
-  normalize!(ai.knowledge_map, ai.config.bots, true)
-end
-mark_no_enemy(ai::NGCBot, bots::Vector, memory::ActionMemory) = mark_no_enemy(ai, bots, memory.scans, memory.shots)
 
 function single_detection!(m::Map, p::Position)
   normalize!(m, -1, false)

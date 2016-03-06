@@ -8,6 +8,12 @@ using .AIUtil
 
 include("knowledge_bayes.jl")
 
+immutable ShotResult
+  source::Int
+  position::Position
+  target::Int
+end
+
 type NGCBot <: AbstractAI
   config::Config
   knowledge_map::ShipTrackMap          # what do we know about enemy positions
@@ -17,6 +23,7 @@ type NGCBot <: AbstractAI
   last_actions::ActionMemory
   turn_counter::Integer
   scan_results::Vector{DetectionResult}
+  shot_results::Vector{ShotResult}
 end
 
 const RADAR_DISCOUNT_FACTOR = 0.5 * 0.75
@@ -28,12 +35,40 @@ function init_round(ai::NGCBot, bots::Vector{AbstractBot}, events::Vector{Abstra
   # TODO: find out if bot actions were ignored.
 end
 
+function on_start(ai::NGCBot, bots::Vector{AbstractBot}, enemies::Vector{AbstractBot})
+  println("enemy bots are $(map(botid, enemies))")
+  ai.knowledge_map = ShipTrackMap(ai.config, map(botid, enemies))
+end
+
 function decide(ai::NGCBot)
   bots = filter_valid(ai.own_bots)
-  scan_positions = map(r->get_radar_area(r, ai.config), ai.last_actions.scans)
-  append!(scan_positions, map(b->get_view_area(b, ai.config), bots)...)
-  input_scans!(ai.knowledge_map, vcat(scan_positions...), ai.scan_results)
+  scan_positions = Vector{Vector{Position}}()
+  if length(ai.last_actions.scans) > 0
+    append!(scan_positions, map(r->get_radar_area(r, ai.config), ai.last_actions.scans))
+  end
+  if length(bots) > 0
+    append!(scan_positions, map(b->get_view_area(b, ai.config), bots))
+  end
+  if length(scan_positions) > 0
+    input_scans!(ai.knowledge_map, vcat(scan_positions...), ai.scan_results)
+  end
+  # reset scan results!
+  ai.scan_results = DetectionResult[]
 
+  # process shooting events
+  #=successes = [s.source for s in ai.shot_results]
+  # process misses
+  for (i, s) in enumerate(ai.last_actions.shooters)
+    if s ∉ successes
+      missed_shot!(ai.knowledge_map, ai.last_actions.shots[i])
+    end
+  end
+  # process hits
+  for s in ai.shot_results
+    hit_shot!(ai.knowledge_map, s.position, s.target)
+  end
+  ai.shot_results = ShotResult[]
+  =#
   # OK, at this point all events and old info has been processed, so we can update our knowledge
   update!(ai.knowledge_map)
   update!(ai.enemy_knowledge_map)
@@ -64,10 +99,10 @@ function decide(ai::NGCBot)
     action = sample_action(vcat(targets_c, scans_c, moves_c), 10.0)
     # update other radar actions after we initialize one, to prevent overlapping
     # radaring
-    if action.name == "radar"
-      mark_scan!(radar_map, get_view_area(position(action), ai.config))
-      scans = get_radar_targets(radar_map, ai.config)
-    end
+    #if action.name == "radar"
+    #  mark_scan!(radar_map, get_view_area(position(action), ai.config))
+    #  scans = get_radar_targets(radar_map, ai.config)
+    #end
     println(name(action), " @ ", action.weight)
     push!(actions, make_action(action, b))
   end
@@ -133,7 +168,7 @@ function on_event(ai::NGCBot, event::HitEvent)
   end
   info("enemy bot $victim was hit @ $(aim)!")
 
-  detect_ship_in_area!(ai.knowledge_map, get_damage_area(aim, ai.config))
+  push!(ai.shot_results, ShotResult(event.source, aim, victim))
 end
 
 function on_event(ai::NGCBot, event::DetectionEvent)
@@ -143,7 +178,7 @@ function on_event(ai::NGCBot, event::DetectionEvent)
   pos = position(bot)
   info("own bot $victim was detected @ $pos")
 
-  detect_ship!(ai.enemy_knowledge_map, pos, botid(bot))
+  #detect_ship!(ai.enemy_knowledge_map, pos, botid(bot))
 end
 
 function on_event(ai::NGCBot, event::DamageEvent)
@@ -152,7 +187,7 @@ function on_event(ai::NGCBot, event::DamageEvent)
   info("Own bot $victim was hit by $(event.damage) @ $(position(bot))!")
 
   # TODO we could estimate the enemies certainty by the damage value
-  detect_ship!(ai.enemy_knowledge_map, position(bot), botid(bot))
+  #detect_ship!(ai.enemy_knowledge_map, position(bot), botid(bot))
 end
 
 function on_event(ai::NGCBot, event::DeathEvent)
@@ -222,6 +257,6 @@ function create(team_id, config::Config)
   end
   mkdir("debug")
 
-	return NGCBot(config,ShipTrackMap(config, [1,2,3]), ShipTrackMap(config, [1,2,3]), Any[], ActionMemory(), 0, DetectionResult[])
+	return NGCBot(config,ShipTrackMap(config, [1,2,3]), ShipTrackMap(config, [1,2,3]), Any[], ActionMemory(), 0, DetectionResult[], ShotResult[])
 end
 end

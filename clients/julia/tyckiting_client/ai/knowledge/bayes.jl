@@ -18,7 +18,7 @@ end
 ##########################################################
 
 # simple bayes update: we found a ship in a certain area
-function bayes_update_scan!(m::BayesShipMap, area::Vector, shipid::Integer, found::Bool)
+function bayes_update_scan!(m::BayesShipMap, area::Vector, shipid::Int, found::Bool)
   mp = m.ships[shipid]
   if found
     update = setdiff(get_map(mp), area)
@@ -92,7 +92,7 @@ end
 # provided until the next call to update, and then
 # use it in a way to gain maximum knowledge.
 ##############################################################
-function push_scan!(m::BayesShipMap, area::Vector, shipid::Integer)
+function push_scan!(m::BayesShipMap, area::Vector, shipid::Int)
   # if just one possible position, this is precise information. Apply it directly.
   if length(area) == 1
     bayes_update_scan!(m, area, shipid, true)
@@ -100,7 +100,7 @@ function push_scan!(m::BayesShipMap, area::Vector, shipid::Integer)
     push!(m.scan_cache, ()->bayes_update_scan!(m, area, shipid, true))
   end
 end
-push_scan!(m::BayesShipMap, area::Position, shipid::Integer) = push_scan!(m, Position[area], shipid)
+push_scan!(m::BayesShipMap, area::Position, shipid::Int) = push_scan!(m, Position[area], shipid)
 
 function push_scan!(m::BayesShipMap, position::Position, found::Bool)
   # if we do not find an enemy, this is precise information. Apply it directly.

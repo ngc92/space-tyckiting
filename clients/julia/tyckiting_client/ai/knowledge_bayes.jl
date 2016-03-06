@@ -42,7 +42,9 @@ function input_scans!(t::ShipTrackMap, scan_area::Vector{Position}, scan_results
 end
 
 function missed_shot!(t::ShipTrackMap, p::Position)
-  push_scan!(t.ships, get_damage_area(p, t.config), false)
+  for x in get_damage_area(p, t.config)
+    push_scan!(t.ships, x, false)
+  end
 end
 
 function hit_shot!(t::ShipTrackMap, p::Position, v::Int)

@@ -48,6 +48,10 @@ function on_start(client::TykitingClient, message::StartMsg)
 #   Handles game start event from server.
 #    Args:  message: Message from server containing team compositions
   info("Game started")
+  if isdefined(client.ai_module, :on_start)
+    enemies = vcat([t.bots for t in message.other_teams]...)
+    client.ai_module.on_start(get(client.ai), message.you.bots, enemies)
+  end
 end
 
 function on_events(client::TykitingClient, message::EventsMsg)

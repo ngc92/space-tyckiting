@@ -73,7 +73,7 @@ function bayes_update_scan!(m::BayesShipMap, position::Position, found::Bool)
   if h != 0
     S_values = map(i->S_factor(m, position, i), keys(m.ships))
   else
-    S_values = map(i->1, keys(m.ships))
+    S_values = map(i->0.5, keys(m.ships))
   end
 
   for (i, mp) in enumerate(values(m.ships))
@@ -126,7 +126,7 @@ function update!(track::BayesShipMap)
 
   for m in values(track.ships)
     # renormalize density
-    total = sum(get_map_values(m,  get_map(m.radius)))
+    total = sum(get_map_values(m, get_map(m.radius)))
     m.data .*= 1 / total
   end
 end

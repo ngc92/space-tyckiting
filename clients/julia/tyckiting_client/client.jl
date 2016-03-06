@@ -28,7 +28,7 @@ type TykitingClient
     info("running bot in dummy computation to compile")
     @time begin
       ai_module.init_round(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[], 0)
-      event_dispatch(dummy, AbstractEvent[])
+      event_dispatch(dummy, AbstractEvent[SightEvent(1, 2, Position(0,0))])
       ai_module.decide(dummy)
     end
 

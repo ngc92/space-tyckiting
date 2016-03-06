@@ -6,7 +6,7 @@ import ClientAI: on_event
 include("../AIUtil/AIUtil.jl")
 using .AIUtil
 
-include("knowledge.jl")
+include("knowledge_bayes.jl")
 
 type NGCBot <: AbstractAI
   config::Config
@@ -16,6 +16,7 @@ type NGCBot <: AbstractAI
 
   last_actions::ActionMemory
   turn_counter::Integer
+  scan_results::Vector{DetectionResult}
 end
 
 const RADAR_DISCOUNT_FACTOR = 0.5 * 0.75
@@ -25,23 +26,14 @@ function init_round(ai::NGCBot, bots::Vector{AbstractBot}, events::Vector{Abstra
   ai.turn_counter = round_id
 
   # TODO: find out if bot actions were ignored.
-  # mark on the map all positions where we would have detected an enemy if there were one
-  # as enemy free. The found enemies are then set during the event dispatch.
-  for b in filter_valid(bots)
-    mark_scan!(ai.knowledge_map, get_view_area(b, ai.config))
-  end
-
-  for r in ai.last_actions.scans
-    mark_scan!(ai.knowledge_map, get_radar_area(r, ai.config))
-  end
-
-  for s in ai.last_actions.shots
-    mark_scan!(ai.knowledge_map, get_damage_area(s, ai.config))
-  end
 end
 
 function decide(ai::NGCBot)
   bots = filter_valid(ai.own_bots)
+  scan_positions = map(r->get_radar_area(r, ai.config), ai.last_actions.scans)
+  append!(scan_positions, map(b->get_view_area(b, ai.config), bots)...)
+  input_scans!(ai.knowledge_map, vcat(scan_positions...), ai.scan_results)
+
   # OK, at this point all events and old info has been processed, so we can update our knowledge
   update!(ai.knowledge_map)
   update!(ai.enemy_knowledge_map)
@@ -50,9 +42,9 @@ function decide(ai::NGCBot)
   # info for radaring: we can exclude positions that we will
   # be revealed by the position of our ships
   radar_map = deepcopy(attack_map)
-  for b in bots
-    mark_scan!(radar_map, get_view_area(b, ai.config))
-  end
+#  for b in bots
+#    mark_scan!(radar_map, get_view_area(b, ai.config))
+#  end
 
   targets = get_shoot_targets(attack_map, ai.config, bots)
   scans = get_radar_targets(radar_map, ai.config)
@@ -88,8 +80,8 @@ function decide(ai::NGCBot)
   # debugging
   # predict enemy movement
   # THIS debugging can take up around 100 ms or so.
-  drawer = HexDrawer(400, attack_map.map.radius)
-  draw(drawer, attack_map.map, sqrt)
+  drawer = HexDrawer(400, attack_map.config.field_radius)
+  draw(drawer, ship_density(attack_map), sqrt)
   # TODO best way to incorporate this info?
   #draw(drawer, ai.enemy_knowledge_map, sqrt, channel=2)
 
@@ -110,17 +102,18 @@ function decide(ai::NGCBot)
 	return actions
 end
 
-########################################
-#      event handling
-#######################################
+#########################################################
+#                  event handling
+#########################################################
 function on_event(ai::NGCBot, event::SightEvent)
   # register a ship detection
-  detect_ship!(ai.knowledge_map, position(event), botid(event))
+  info("bot $(event.source) saw bot $(botid(event)) @$(position(event)).")
+  push!(ai.scan_results, DetectionResult(position(event), botid(event)))
 end
 
 function on_event(ai::NGCBot, event::RadarEvent)
   # register a ship detection
-  detect_ship!(ai.knowledge_map, position(event))
+  push!(ai.scan_results, DetectionResult(position(event), -1))
 end
 
 function on_event(ai::NGCBot, event::HitEvent)
@@ -183,9 +176,9 @@ function on_event(ai::NGCBot, event::DeathEvent)
 end
 
 function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)
-  pos = get_map(emap.map.radius)
+  pos = get_map(emap.config.field_radius)
   # TODO we need to weight this here, actually
-  total_hit = gather(emap.map, p->get_damage_area(p, config))
+  total_hit = gather(ship_density(emap), p->get_damage_area(p, config))
   # take into account both direct damage value (1) and detection (RADAR_DISCOUNT_FACTOR),
   # but detection is imprecise, so reduce its weight
   SHOOT_FACTOR = (1 + RADAR_DISCOUNT_FACTOR / 2)
@@ -204,17 +197,19 @@ function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)
 end
 
 function get_radar_targets(emap::ShipTrackMap, config::Config)
-  pos = get_map(emap.map.radius)
+  pos = get_map(emap.config.field_radius)
   # this gives the certainty with which we assume that an enemy is somewhere
   # inside the radar territority.
-  total_hit = gather(emap.map, p->get_radar_area(p, config))
+  total_hit = gather(ship_density(emap), p->get_radar_area(p, config))
   weights = Float64[total_hit[p] for p in pos] .* RADAR_DISCOUNT_FACTOR
   return plan_actions("radar", pos, weights)
 end
 
 function get_threat_level(bot::AbstractBot, knowledge::ShipTrackMap, config::Config, pos::Position = position(bot))
-  area = get_damage_area(pos, config)
-  return mapreduce(p->knowledge.map[p], +, area)
+  return 0.0
+  #=area = get_damage_area(pos, config)
+  return knowledge_map.ship_count * mapreduce(p->knowledge.map[p], +, area)
+  =#
 end
 
 
@@ -227,6 +222,6 @@ function create(team_id, config::Config)
   end
   mkdir("debug")
 
-	return NGCBot(config,ShipTrackMap(config), ShipTrackMap(config), Any[], ActionMemory(), 0)
+	return NGCBot(config,ShipTrackMap(config, [1,2,3]), ShipTrackMap(config, [1,2,3]), Any[], ActionMemory(), 0, DetectionResult[])
 end
 end

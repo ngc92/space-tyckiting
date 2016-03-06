@@ -77,12 +77,12 @@ function decide(ai::NGCBot)
   attack_map = estimate_movement(ai.knowledge_map)
   # info for radaring: we can exclude positions that we will
   # be revealed by the position of our ships
-  radar_map = deepcopy(attack_map)
-#  for b in bots
-#    mark_scan!(radar_map, get_view_area(b, ai.config))
-#  end
+  radar_map = ship_density(attack_map)
+  for b in bots
+    set_map_values!(radar_map, 0, get_view_area(b, ai.config))
+  end
 
-  targets = get_shoot_targets(attack_map, ai.config, bots)
+  targets = get_shoot_targets(ship_density(attack_map), ai.config, bots)
   scans = get_radar_targets(radar_map, ai.config)
 
   actions = AbstractAction[]
@@ -97,13 +97,13 @@ function decide(ai::NGCBot)
     threats =  map(x->get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(x)), moves)
     moves_c = best_actions(plan_actions(moves, -threats), 5)
 
-    action = sample_action(vcat(targets_c, scans_c, moves_c), 10.0)
+    action = sample_action(vcat(targets_c, scans_c, moves_c), 20.0)
     # update other radar actions after we initialize one, to prevent overlapping
     # radaring
-    #if action.name == "radar"
-    #  mark_scan!(radar_map, get_view_area(position(action), ai.config))
-    #  scans = get_radar_targets(radar_map, ai.config)
-    #end
+    if action.name == "radar"
+      set_map_values!(radar_map, 0, get_radar_area(position(action), ai.config))
+      scans = get_radar_targets(radar_map, ai.config)
+    end
     println(name(action), " @ ", action.weight)
     push!(actions, make_action(action, b))
   end
@@ -211,10 +211,10 @@ function on_event(ai::NGCBot, event::DeathEvent)
   info("killed enemy bot $(victim)!")
 end
 
-function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)
-  pos = get_map(emap.config.field_radius)
+function get_shoot_targets(emap::Map, config::Config, bots)
+  pos = get_map(emap.radius)
   # TODO we need to weight this here, actually
-  total_hit = gather(ship_density(emap), p->get_damage_area(p, config))
+  total_hit = gather(emap, p->get_damage_area(p, config))
   # take into account both direct damage value (1) and detection (RADAR_DISCOUNT_FACTOR),
   # but detection is imprecise, so reduce its weight
   SHOOT_FACTOR = (1 + RADAR_DISCOUNT_FACTOR / 2)
@@ -232,11 +232,11 @@ function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)
   return plan_actions("cannon", pos, weights)
 end
 
-function get_radar_targets(emap::ShipTrackMap, config::Config)
-  pos = get_map(emap.config.field_radius)
+function get_radar_targets(emap::Map, config::Config)
+  pos = get_map(emap.radius)
   # this gives the certainty with which we assume that an enemy is somewhere
   # inside the radar territority.
-  total_hit = gather(ship_density(emap), p->get_radar_area(p, config))
+  total_hit = gather(emap, p->get_radar_area(p, config))
   weights = Float64[total_hit[p] for p in pos] .* RADAR_DISCOUNT_FACTOR
   return plan_actions("radar", pos, weights)
 end

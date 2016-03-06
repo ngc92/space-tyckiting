@@ -12,7 +12,7 @@ module ClientAI
       try
         $(esc(ex))
       catch e
-        println(e)
+        showerror(STDERR, e)
         Base.show_backtrace(STDOUT, catch_backtrace())
       end
     end

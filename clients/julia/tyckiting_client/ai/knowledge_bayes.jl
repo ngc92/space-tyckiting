@@ -87,4 +87,7 @@ function ship_density(track::ShipTrackMap)
   return result
 end
 
+function bot_count(track::ShipTrackMap)
+  return length(track.ships.ships)
+end
 

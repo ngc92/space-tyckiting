@@ -18,7 +18,7 @@ module AIUtil
   export filter_valid
 
   # actions
-  export ActionPlan, plan_actions, softmax, sample_action, best_actions
+  export ActionPlan, plan_actions, softmax, sample_action, best_actions, randomize
   export ActionMemory, remember!, get_aim, validate!
 
   # drawer

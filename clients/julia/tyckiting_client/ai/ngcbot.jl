@@ -39,6 +39,7 @@ end
 function on_start(ai::NGCBot, bots::Vector{AbstractBot}, enemies::Vector{AbstractBot})
   println("enemy bots are $(map(botid, enemies))")
   ai.knowledge_map = ShipTrackMap(ai.config, map(botid, enemies))
+  ai.enemy_knowledge_map = ShipTrackMap(ai.config, map(botid, bots))
 end
 
 function decide(ai::NGCBot)
@@ -78,6 +79,7 @@ function decide(ai::NGCBot)
   # info for radaring: we can exclude positions that we will
   # be revealed by the position of our ships
   radar_map = ship_density(attack_map)
+  threat_map = ship_density(ai.enemy_knowledge_map)
   for b in bots
     set_map_values!(radar_map, 0, get_view_area(b, ai.config))
   end
@@ -87,17 +89,19 @@ function decide(ai::NGCBot)
 
   actions = AbstractAction[]
   for b in bots
-    curthreat = get_threat_level(b, ai.enemy_knowledge_map, ai.config)
+    curthreat = bot_count(ai.knowledge_map) * get_threat_level(b, threat_map, ai.config)
     mpos = get_move_area(b, ai.config)
     moves = plan_actions("move", mpos, zeros(size(mpos)))
 
     # correct for threat
-    targets_c = best_actions(plan_actions(targets, -curthreat), 5)
-    scans_c = best_actions(plan_actions(scans, -curthreat), 5)
-    threats =  map(x->get_threat_level(b, ai.enemy_knowledge_map, ai.config, position(x)), moves)
-    moves_c = best_actions(plan_actions(moves, -threats), 5)
+    targets_c = randomize(plan_actions(targets, -curthreat), 0.1)
+    scans_c = randomize(plan_actions(scans, -curthreat), 0.1)
+    threats =  map(x->get_threat_level(b, threat_map, ai.config, position(x)), moves) * bot_count(ai.knowledge_map)
+    moves_c = randomize(plan_actions(moves, -threats), 0.1)
 
-    action = sample_action(vcat(targets_c, scans_c, moves_c), 20.0)
+    # some randomization
+
+    action = best_actions(vcat(targets_c, scans_c, moves_c), 1)[1]
     # update other radar actions after we initialize one, to prevent overlapping
     # radaring
     if action.name == "radar"
@@ -184,7 +188,9 @@ function on_event(ai::NGCBot, event::DetectionEvent)
   pos = position(bot)
   info("own bot $victim was detected @ $pos")
 
-  #detect_ship!(ai.enemy_knowledge_map, pos, botid(bot))
+  # since we have no idea where the enemy scanned
+  # we can call this function here directly
+  input_scans!(ai.enemy_knowledge_map, Position[], [DetectionResult(pos, victim)])
 end
 
 function on_event(ai::NGCBot, event::DamageEvent)
@@ -193,7 +199,7 @@ function on_event(ai::NGCBot, event::DamageEvent)
   info("Own bot $victim was hit by $(event.damage) @ $(position(bot))!")
 
   # TODO we could estimate the enemies certainty by the damage value
-  #detect_ship!(ai.enemy_knowledge_map, position(bot), botid(bot))
+  input_scans!(ai.enemy_knowledge_map, Position[], [DetectionResult(position(bot), botid(bot))])
 end
 
 function on_event(ai::NGCBot, event::DeathEvent)
@@ -241,11 +247,9 @@ function get_radar_targets(emap::Map, config::Config)
   return plan_actions("radar", pos, weights)
 end
 
-function get_threat_level(bot::AbstractBot, knowledge::ShipTrackMap, config::Config, pos::Position = position(bot))
-  return 0.0
-  #=area = get_damage_area(pos, config)
-  return knowledge_map.ship_count * mapreduce(p->knowledge.map[p], +, area)
-  =#
+function get_threat_level(bot::AbstractBot, knowledge::Map, config::Config, pos::Position = position(bot))
+  area = get_damage_area(pos, config)
+  return mapreduce(p->knowledge[p], +, area)
 end
 
 

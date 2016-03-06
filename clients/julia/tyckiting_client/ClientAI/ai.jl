@@ -1,7 +1,7 @@
 abstract AbstractAI
 
 # event dispatcher loop
-function event_dispatch(ai::AbstractAI, events::Vector{AbstractEvent})
+function event_dispatch(ai, events::Vector{AbstractEvent})
   for event in events
     on_event(ai, event)
   end

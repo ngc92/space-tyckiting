@@ -2,9 +2,16 @@ abstract AbstractMap
 
 # helper data type that contains a map of the world
 
-type Map
+immutable Map
   data::Matrix
   radius::Int
+  function Map(data::Matrix, radius::Integer)
+    diameter = 2radius + 1
+    @assert size(data, 1) == diameter
+    @assert size(data, 2) == diameter
+    return new( data, radius )
+  end
+
 end
 
 world_radius(m::Map) = m.radius
@@ -13,7 +20,6 @@ function Map(T::DataType, size::Integer, init = zero(T))
   diameter = 2size + 1
   return Map( fill(init, (diameter, diameter)), size )
 end
-
 
 ##################################################
 #        indexing, get/set ops

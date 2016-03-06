@@ -15,6 +15,9 @@ function init_round(ai::DummyAI, bots::Vector{AbstractBot}, events::Vector{Abstr
   ai.bots = bots
 end
 
+function on_start(ai::DummyAI, own_bots::Vector, enemy_bots::Vector)
+end
+
 function decide(ai::DummyAI)
   bots = filter_valid(ai.bots)
   actions = AbstractAction[]

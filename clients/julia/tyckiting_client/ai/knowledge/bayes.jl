@@ -119,6 +119,7 @@ function update!(track::BayesShipMap)
   for f in track.scan_cache
     f()
   end
+  track.scan_cache = Any[]
 
   for m in values(track.ships)
     # renormalize density

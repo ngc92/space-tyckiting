@@ -2,6 +2,7 @@ module AIUtil
   using ClientAI
 
   import Base: getindex, setindex!, fill!, position
+  import ClientAI: on_event
 
   include("ai_base.jl")
   include("grid.jl")
@@ -18,7 +19,7 @@ module AIUtil
 
   # actions
   export ActionPlan, plan_actions, softmax, sample_action, best_actions
-  export ActionMemory, remember!, get_aim
+  export ActionMemory, remember!, get_aim, validate!
 
   # drawer
   export HexDrawer, get_image, draw

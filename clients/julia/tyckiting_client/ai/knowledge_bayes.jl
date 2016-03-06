@@ -14,11 +14,11 @@ position(d::DetectionResult) = d.pos
 type ShipTrackMap
   config::Config
   ships::BayesShipMap
-  ship_count::Int
+  kills::Vector{Int}
 end
 
 function ShipTrackMap(config::Config, enemies::Vector{Int})
-  return ShipTrackMap(config, BayesShipMap(enemies, config), config.bots)
+  return ShipTrackMap(config, BayesShipMap(enemies, config), Int[])
 end
 
 function input_scans!(t::ShipTrackMap, scan_area::Vector{Position}, scan_results::Vector{DetectionResult})
@@ -54,8 +54,9 @@ end
 
 # call this to signal the knowledge system that a ship has been killed
 # positions is a list of possible positions where the kill could have happened
-function notify_kill!(track::ShipTrackMap, positions::Vector)
-  # TODO remove that ship from BayesShipMap
+function notify_kill!(track::ShipTrackMap, ship::Int)
+  # remove that ship from BayesShipMap
+  push!(track.kills, ship)
 end
 
 # call this function to signal that you are finished adding new information.
@@ -63,13 +64,19 @@ end
 function update!(track::ShipTrackMap)
   # renormalize density
   update!(track.ships)
+
+  # remove killed ships
+  for kill in track.kills
+    delete!(track.ships.ships, kill)
+  end
+  track.kills = Int[]
 end
 
 # estimate ship positions after one round, and return new ShipTrack object
 function estimate_movement(track::ShipTrackMap)
   # TODO 0.5 is OK or even high for undetected enemys, but I guess after detection they should move
   # more with D = 1
-  return ShipTrackMap(track.config, simulate_movement(track.ships, track.config, DIFFUSION_COEFFICIENT), track.ship_count)
+  return ShipTrackMap(track.config, simulate_movement(track.ships, track.config, DIFFUSION_COEFFICIENT), Int[])
 end
 
 function ship_density(track::ShipTrackMap)

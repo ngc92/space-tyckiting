@@ -32,7 +32,8 @@ function init_round(ai::NGCBot, bots::Vector{AbstractBot}, events::Vector{Abstra
   ai.own_bots = bots
   ai.turn_counter = round_id
 
-  # TODO: find out if bot actions were ignored.
+  # find out if bot actions were ignored.
+  validate!(ai.last_actions, events)
 end
 
 function on_start(ai::NGCBot, bots::Vector{AbstractBot}, enemies::Vector{AbstractBot})
@@ -56,7 +57,7 @@ function decide(ai::NGCBot)
   ai.scan_results = DetectionResult[]
 
   # process shooting events
-  #=successes = [s.source for s in ai.shot_results]
+  successes = [s.source for s in ai.shot_results]
   # process misses
   for (i, s) in enumerate(ai.last_actions.shooters)
     if s ∉ successes
@@ -68,7 +69,7 @@ function decide(ai::NGCBot)
     hit_shot!(ai.knowledge_map, s.position, s.target)
   end
   ai.shot_results = ShotResult[]
-  =#
+
   # OK, at this point all events and old info has been processed, so we can update our knowledge
   update!(ai.knowledge_map)
   update!(ai.enemy_knowledge_map)
@@ -117,6 +118,8 @@ function decide(ai::NGCBot)
   # THIS debugging can take up around 100 ms or so.
   drawer = HexDrawer(400, attack_map.config.field_radius)
   draw(drawer, ship_density(attack_map), sqrt)
+  # fake validation to fill the arrays
+  validate!(ai.last_actions, AbstractEvent[])
   # TODO best way to incorporate this info?
   #draw(drawer, ai.enemy_knowledge_map, sqrt, channel=2)
 
@@ -148,6 +151,7 @@ end
 
 function on_event(ai::NGCBot, event::RadarEvent)
   # register a ship detection
+  info("radar detected enemy @$(position(event)).")
   push!(ai.scan_results, DetectionResult(position(event), -1))
 end
 
@@ -164,6 +168,8 @@ function on_event(ai::NGCBot, event::HitEvent)
   if aim == nothing
     # this might happen if our last instructions did not come through or went in too late
     warn("could not find shooter that hit $(victim)! Lag?")
+    println(ai.last_actions.shooters)
+    println(event)
     return
   end
   info("enemy bot $victim was hit @ $(aim)!")
@@ -201,13 +207,8 @@ function on_event(ai::NGCBot, event::DeathEvent)
   end
 
   # otherwise, we killed an enemy
-  shots = ai.last_actions.shots
-  if length(shots) > 0
-    notify_kill!(ai.knowledge_map, shots)
-    info("killed enemy bot $(victim)!")
-  else
-    warn("Killed an enemy, but did not shoot. Something fishy here!")
-  end
+  notify_kill!(ai.knowledge_map, victim)
+  info("killed enemy bot $(victim)!")
 end
 
 function get_shoot_targets(emap::ShipTrackMap, config::Config, bots)

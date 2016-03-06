@@ -1,9 +1,9 @@
 module ClientAI
   import Base: position
 
-	include("types.jl")
+  include("types.jl")
   include("bot.jl")
-	include("actions.jl")
+  include("actions.jl")
   include("events.jl")
   include("ai.jl")
 

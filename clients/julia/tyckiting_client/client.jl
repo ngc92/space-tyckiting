@@ -27,8 +27,11 @@ type TykitingClient
     dummy = ai_module.create(0, Config())
     info("running bot in dummy computation to compile")
     @time begin
-      ai_module.init_round(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], AbstractEvent[], 0)
-      event_dispatch(dummy, AbstractEvent[])
+      # TODO make events believable! This sight event is probably not possible, so it might cause errors for bots 
+      # that rely on that.
+      events = AbstractEvent[SightEvent(1, 2, Position(0,0))]
+      ai_module.init_round(dummy, AbstractBot[ClientAI.WebSockOwnBot(0, "dummy", 0, true, Position(0,0), 10)], events, 0)
+      event_dispatch(dummy, events)
       ai_module.decide(dummy)
     end
 

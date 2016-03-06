@@ -2,7 +2,7 @@ abstract AbstractMap
 
 # helper data type that contains a map of the world
 
-type Map
+immutable Map
   data::Matrix
   radius::Int
   function Map(data::Matrix, radius::Integer)

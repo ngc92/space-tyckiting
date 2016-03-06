@@ -33,13 +33,12 @@ function bayes_update_scan!(m::BayesShipMap, area::Vector, shipid::Integer, foun
 end
 
 function S_factor(m::BayesShipMap, position::Position, ind::Int)
-  shipids = keys(m.ships)
+  shipids = collect(keys(m.ships))
   S = 0
   for i in 1:length(shipids)
     if i == ind
       continue
     end
-    a = m.ships[i][position]
     s = 1
     for j = i+1:length(shipids)
       if j == ind
@@ -50,12 +49,12 @@ function S_factor(m::BayesShipMap, position::Position, ind::Int)
         if k == ind
           continue
         end
-        t -= m.ships[k][position]
+        t -= m.ships[shipids[k]][position]
       end
-      s -= m.ships[j][position] * t
+      s -= m.ships[shipids[j]][position] * t
       # TODO quadruple produts etc
     end
-    S += a * s
+    S += m.ships[shipids[i]][position] * s
   end
   return S
 end

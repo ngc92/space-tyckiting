@@ -13,6 +13,15 @@ function BayesShipMap(ships::Vector{Int}, config::Config)
   return BayesShipMap(Dict([i=>deepcopy(m) for i in ships]), Any[])
 end
 
+# print-like functions
+function Base.showcompact(io::IO, bsm::BayesShipMap)
+  print(io, "BayesShipMap(")
+  #showcompact(io, ships)
+  print(io, ")")
+end
+Base.show(io::IO, bsm::BayesShipMap) = showcompact(io, bsm)
+Base.print(io::IO, bsm::BayesShipMap) = showcompact(io, bsm)
+
 ##########################################################
 #    lowest level bayesian inference functions
 ##########################################################

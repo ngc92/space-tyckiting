@@ -96,10 +96,7 @@ end
 function push_scan!(m::BayesShipMap, area::Vector, shipid::Integer)
   # if just one possible position, this is precise information. Apply it directly.
   if length(area) == 1
-    println("GOT PRECISE INFO")
-    println(sum(m.ships[shipid].data))
     bayes_update_scan!(m, area, shipid, true)
-    println(sum(m.ships[shipid].data))
   else
     push!(m.scan_cache, ()->bayes_update_scan!(m, area, shipid, true))
   end

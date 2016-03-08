@@ -124,14 +124,17 @@ Base.intersect(a::AbstractArea, b::AbstractArea) = IntersectionArea(a, b)
 ###################################################
 #        convenience functions for bots
 ###################################################
-# areas around a specific point
-view_area(origin,  config::Config)   = intersect(circle(origin, config.see),    circle(config.field_radius))
-radar_area(origin, config::Config)   = intersect(circle(origin, config.radar),  circle(config.field_radius))
-move_area(origin,  config::Config)   = intersect(circle(origin, config.move),   circle(config.field_radius))
-damage_area(center,  config::Config) = intersect(circle(origin, config.cannon), circle(config.field_radius))
-
 # centered areas
 view_area(config::Config)    = circle(config.see)
 radar_area(config::Config)   = circle(config.radar)
 move_area(config::Config)    = circle(config.move)
 damage_area(config::Config)  = circle(config.cannon)
+map_area(config::Config)     = circle(config.field_radius)
+
+# areas around a specific point
+view_area(origin,  config::Config)   = intersect(circle(origin, config.see),    map_area(config))
+radar_area(origin, config::Config)   = intersect(circle(origin, config.radar),  map_area(config))
+move_area(origin,  config::Config)   = intersect(circle(origin, config.move),   map_area(config))
+damage_area(center,  config::Config) = intersect(circle(origin, config.cannon), map_area(config))
+
+

@@ -16,12 +16,12 @@ module AIUtil
   export filter_valid
 
   # actions
-  export ActionPlan, plan_actions, softmax, sample_action, best_actions, randomize
+  export ActionPlan, plan_actions, best_actions, randomize
   export ActionMemory, remember!, get_aim, validate!
 
   # drawer
   export HexDrawer, get_image, draw
 
   # others
-  export event_dispatch, ActionPlan, plan_actions, softmax, sample_action, categorized_action_positions
+  export event_dispatch, categorized_action_positions
 end

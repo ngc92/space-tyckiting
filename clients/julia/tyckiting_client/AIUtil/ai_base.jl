@@ -1,7 +1,6 @@
 #################################################################
 #                       actions                                 #
 import ClientAI: botid, make_action
-using StatsBase: sample, WeightVec
 
 immutable ActionPlan <: AbstractAction
   name::ASCIIString
@@ -21,17 +20,6 @@ function plan_actions(old::Vector{ActionPlan}, shift::Vector{Float64})
   return convert(Vector{ActionPlan}, result)
 end
 randomize(old::Vector{ActionPlan}, rmax::Real) =  map(t->ActionPlan(t.name, t.pos, t.weight + rand() * rmax), old)
-function softmax(values, λ = 1.0)
-  E = exp(values .* λ)
-  return E / sum(E)
-end
-
-function sample_action(actions::Vector{ActionPlan}, λ = 1.0)
-  weights = [a.weight for a in actions]
-  probs = softmax(weights, λ)
-  index = sample( WeightVec(probs) )
-  return actions[index]
-end
 
 best_actions(actions::Vector{ActionPlan}, N::Integer = 1) = sort(actions, by = a->a.weight, rev=true)[1:N]
 

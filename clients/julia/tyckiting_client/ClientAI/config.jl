@@ -1,20 +1,3 @@
-abstract AbstractBot
-
-immutable Position
-	x::Int
-	y::Int
-end
-
-function Position(d::Dict)
-  return Position(Int(d["x"]), Int(d["y"]))
-end
-
-to_dict(p::Position) = Dict("x" => p.x, "y" => p.y)
-position(p::Position) = p # this seems a little strange, but it means that we can now easily build functions
-                          # that takes positional objects or positions as parameters and just call this function to
-                          # get the actual position
-position(t::Tuple{Float64, Float64}) = Position(t[1], t[2])
-
 immutable Config
   bots::Int
   field_radius::Int

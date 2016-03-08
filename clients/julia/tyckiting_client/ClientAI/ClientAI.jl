@@ -2,6 +2,7 @@ module ClientAI
   import Base: position
 
   include("types.jl")
+  include("hexgrid.jl")
   include("bot.jl")
   include("actions.jl")
   include("events.jl")
@@ -19,12 +20,24 @@ module ClientAI
   end
   export @checked
 
-	export AbstractAI, AbstractAction, AbstractEvent, AbstractBot, Position, Config
-	export to_dict, MoveAction, RadarAction, CannonAction, move
+	export AbstractAI
 
-  # event types
-  export HitEvent, DeathEvent, SightEvent, RadarEvent, DetectionEvent, DamageEvent, MoveEvent, NoActionEvent, on_event, event_dispatch
+  # general functions and types
+  export Position, Config
+  export botid, position, to_dict
+
+  # events
+  export AbstractEvent, HitEvent, DeathEvent, SightEvent, RadarEvent, DetectionEvent, DamageEvent, MoveEvent, NoActionEvent
+  export on_event, event_dispatch
+
+  # actions
+  export AbstractAI, MoveAction, RadarAction, CannonAction
 
   # bot functions
-  export is_alive, team, botid, name, position, hitpoints, make_action
+  export AbstractBot
+  export is_alive, team, name, hitpoints, make_action
+
+  # grid functions
+  export distance, radius, center, circle
+  export view_area, radar_area, move_area, damage_area, map_area
 end

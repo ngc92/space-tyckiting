@@ -1,4 +1,3 @@
-workspace()
 abstract AbstractCoordinate
 import Base: +
 

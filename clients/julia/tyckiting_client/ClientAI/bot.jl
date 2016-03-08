@@ -1,3 +1,5 @@
+abstract AbstractBot
+
 # generic bot functions
 is_alive(b::AbstractBot) = b.alive
 team(b::AbstractBot) = b.team_id

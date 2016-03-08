@@ -2,6 +2,7 @@ module ClientAI
   import Base: position
 
   include("types.jl")
+  include("hexgrid.jl")
   include("bot.jl")
   include("actions.jl")
   include("events.jl")

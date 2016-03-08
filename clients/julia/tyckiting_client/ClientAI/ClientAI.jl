@@ -23,7 +23,7 @@ module ClientAI
 	export AbstractAI
 
   # general functions and types
-  export Position, Config
+  export AbstractAI, Position, Config
   export botid, position, to_dict
 
   # events
@@ -31,7 +31,7 @@ module ClientAI
   export on_event, event_dispatch
 
   # actions
-  export AbstractAI, MoveAction, RadarAction, CannonAction
+  export AbstractAction, MoveAction, RadarAction, CannonAction
 
   # bot functions
   export AbstractBot

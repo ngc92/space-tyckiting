@@ -8,6 +8,7 @@ end
 
 Base.zero{T}(::Type{HexGridCoordinate{T}}) = HexGridCoordinate(zero(T), zero(T))
 +{T}(a::HexGridCoordinate{T}, b::HexGridCoordinate{T}) = HexGridCoordinate(a.x + b.x, a.y + b.y)
+Base.print(io::IO, c::HexGridCoordinate) = print(io, c.x, ", ", c.y)
 
 # typealias for the almost exclusively used integer grid positions
 typealias Position HexGridCoordinate{Int}
@@ -108,7 +109,7 @@ function Base.start(iter::IntersectionArea)
 end
 # cannot predict length
 
-function Base.next(iter::IntersectionArea, state::Tuple(Position, Position))
+function Base.next(iter::IntersectionArea, state::Tuple{Position, Position})
   value, istate = state
   v, n = next(iter.A, istate)
   while v ∉ iter.B
@@ -117,7 +118,7 @@ function Base.next(iter::IntersectionArea, state::Tuple(Position, Position))
   return value, tuple(v, n)
 end
 
-Base.done(iter::IntersectionArea, state::Tuple(Position, Position)) = done(iter.A, state[2])
+Base.done(iter::IntersectionArea, state::Tuple{Position, Position}) = done(iter.A, state[2])
 Base.intersect(a::AbstractArea, b::AbstractArea) = IntersectionArea(a, b)
 
 ###################################################

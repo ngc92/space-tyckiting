@@ -89,6 +89,7 @@ end
 radius(a::GeneralCircularArea) = a.radius
 center(a::GeneralCircularArea) = a.center
 circle(o::Position, r::Int) = GeneralCircularArea(o, r)
+circle(origin, radius::Int) = circle(position(origin), radius)
 
 # shift circles
 +(a::CircularArea, b::Position) = GeneralCircularArea(center(a)+b, radius(a))
@@ -102,7 +103,7 @@ end
 function Base.start(iter::IntersectionArea)
   state = start(iter.A)
   value, state = next(iter.A, state)
-  while value ∉ iter.B
+  while value ∉ iter.B and !done(iter.A, state)
     value, state = next(iter.A, state)
   end
   return value, state

@@ -103,7 +103,7 @@ end
 function Base.start(iter::IntersectionArea)
   state = start(iter.A)
   value, state = next(iter.A, state)
-  while value ∉ iter.B and !done(iter.A, state)
+  while value ∉ iter.B && !done(iter.A, state)
     value, state = next(iter.A, state)
   end
   return value, state
@@ -113,7 +113,7 @@ end
 function Base.next(iter::IntersectionArea, state::Tuple{Position, Position})
   value, istate = state
   v, n = next(iter.A, istate)
-  while v ∉ iter.B
+  while v ∉ iter.B && !done(iter.A, n)
     v, n = next(iter.A, n)
   end
   return value, tuple(v, n)
@@ -136,6 +136,6 @@ map_area(config::Config)     = circle(config.field_radius)
 view_area(origin,  config::Config)   = intersect(circle(origin, config.see),    map_area(config))
 radar_area(origin, config::Config)   = intersect(circle(origin, config.radar),  map_area(config))
 move_area(origin,  config::Config)   = intersect(circle(origin, config.move),   map_area(config))
-damage_area(center,  config::Config) = intersect(circle(origin, config.cannon), map_area(config))
+damage_area(origin,  config::Config) = intersect(circle(origin, config.cannon), map_area(config))
 
 

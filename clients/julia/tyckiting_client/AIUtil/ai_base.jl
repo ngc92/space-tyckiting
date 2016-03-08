@@ -20,6 +20,7 @@ function plan_actions(old::Vector{ActionPlan}, shift::Vector{Float64})
   result =  map(x->ActionPlan(x[1].name, x[1].pos, x[1].weight + x[2]), zip(old, shift))
   return convert(Vector{ActionPlan}, result)
 end
+randomize(old::Vector{ActionPlan}, rmax::Real) =  map(t->ActionPlan(t.name, t.pos, t.weight + rand() * rmax), old)
 function softmax(values, λ = 1.0)
   E = exp(values .* λ)
   return E / sum(E)

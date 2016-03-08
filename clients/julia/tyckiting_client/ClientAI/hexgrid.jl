@@ -113,7 +113,7 @@ function Base.next(iter::IntersectionArea, state::Tuple{Position, Position})
   value, istate = state
   v, n = next(iter.A, istate)
   while v ∉ iter.B
-    v, n = next(a.A, n)
+    v, n = next(iter.A, n)
   end
   return value, tuple(v, n)
 end

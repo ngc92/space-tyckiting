@@ -22,7 +22,7 @@ function decide(ai::DummyAI)
   bots = filter_valid(ai.bots)
   actions = AbstractAction[]
   for b in bots
-    push!(actions, MoveAction(botid(b), rand(get_move_area(b, ai.config))))
+    push!(actions, MoveAction(botid(b), rand(collect(move_area(b, ai.config)))))
   end
   return actions
 end

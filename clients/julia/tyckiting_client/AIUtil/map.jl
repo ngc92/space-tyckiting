@@ -58,9 +58,9 @@ function diffuse(map::Map, kernel::Function, D::Real = 1)
   # to spread to
   cpy = deepcopy(map)
   fill!(cpy, 0)
-  for p in get_map(map.radius)
+  for p in circle(map.radius)
     # neighbours
-    t = kernel(p)
+    t = collect(kernel(p))
     d = map[p] / length(t) * D
     for x in t
       cpy[x] += d
@@ -75,9 +75,9 @@ function gather(map::Map, kernel::Function)
   # to gather from
   cpy = deepcopy(map)
   fill!(cpy, 0)
-  for p in get_map(map.radius)
+  for p in circle(map.radius)
     # neighbours
-    t = kernel(p)
+    t = collect(kernel(p))
     # TODO allow for weighted kernels
     cpy[p] += sum([map[p] for p in t])
   end

@@ -95,9 +95,15 @@ circle(origin, radius::Int) = circle(position(origin), radius)
 +(a::CircularArea, b::Position) = GeneralCircularArea(center(a)+b, radius(a))
 
 # type for intersection of spherical shape and a complete map
-immutable IntersectionArea <: AbstractArea
-  A::AbstractArea
-  B::AbstractArea
+immutable IntersectionArea{T1<:AbstractArea, T2 <: AbstractArea} <: AbstractArea
+  A::T1
+  B::T2
+end
+
+immutable IntIterState
+  value::Position
+  state::Position
+  done::Bool
 end
 
 function Base.start(iter::IntersectionArea)
@@ -106,20 +112,24 @@ function Base.start(iter::IntersectionArea)
   while value ∉ iter.B && !done(iter.A, state)
     value, state = next(iter.A, state)
   end
-  return value, state
+  return IntIterState(value, state, value ∉ iter.B)
 end
 # cannot predict length
 
-function Base.next(iter::IntersectionArea, state::Tuple{Position, Position})
-  value, istate = state
-  v, n = next(iter.A, istate)
+function Base.next(iter::IntersectionArea, state::IntIterState)
+  # return the last value now
+  if done(iter.A, state.state)
+    return state.value, IntIterState(state.value, state.state, true)
+  end
+
+  v, n = next(iter.A, state.state)
   while v ∉ iter.B && !done(iter.A, n)
     v, n = next(iter.A, n)
   end
-  return value, tuple(v, n)
+  return state.value, IntIterState(v, n, v ∉ iter.B)
 end
 
-Base.done(iter::IntersectionArea, state::Tuple{Position, Position}) = done(iter.A, state[2])
+Base.done(iter::IntersectionArea, state::IntIterState) = state.done
 Base.intersect(a::AbstractArea, b::AbstractArea) = IntersectionArea(a, b)
 
 ###################################################

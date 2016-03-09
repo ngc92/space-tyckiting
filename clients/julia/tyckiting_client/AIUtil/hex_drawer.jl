@@ -1,5 +1,5 @@
 immutable HexDrawer
-  image::Array
+  image::Array{Float64, 3}
   size::Int
   radius::Int
   scale::Float64
@@ -57,20 +57,21 @@ end
 ##############################################
 function HexDrawer(size::Integer, radius::Integer)
   scale = 2radius/ (size-1)
-  image = zeros(size, size, 3)
+  image = zeros(3, size, size)
   return HexDrawer(image, size, radius, scale)
 end
 
 # draw a map to the image
 function draw(drawer::HexDrawer, m::Map)
-  # and then we draw taking values from transformed.
-  @assert world_radius(m) == drawer.radius
-  for x in 1:drawer.size
-    for y in 1:drawer.size
+  @assert radius(m) == drawer.radius
+  # relay to other information to get specific drawer.image type
+  world = map_area(m)
+  for y in 1:size(drawer.image, 3)
+    for x in 1:size(drawer.image, 2)
       cu, cv = cart2hex(drawer, x, y)
       hxc = hexround(cu, cv)
-      if is_valid_pos(hxc[1], hxc[2], m)
-        drawer.image[x, y, :] = m[hxc[1], hxc[2]]
+      if Position(hxc[1], hxc[2]) ∈ world
+        drawer.image[:, x, y] = m[hxc[1], hxc[2]]
       end
     end
   end
@@ -79,7 +80,7 @@ end
 # draw, but apply data transform before that
 function draw(drawer::HexDrawer, m::Map, transform::Function)
   transformed = deepcopy(m)
-  for p in get_map(m)
+  for p in map_area(m)
     transformed[p] = transform(m[p])
   end
   draw(drawer, transformed)
@@ -89,7 +90,7 @@ function draw(drawer::HexDrawer, pos::Position, color::Vector)
   cx, cy = hex2cart(drawer, pos.x, pos.y)
   x = round(Int, cx)
   y = round(Int, cy)
-  drawer.image[x, y, :] = color
+  drawer.image[:, x, y] = color
 end
 
 function draw(drawer::HexDrawer, pos::Position, mask::Matrix{Bool}, color::Vector)
@@ -97,8 +98,8 @@ function draw(drawer::HexDrawer, pos::Position, mask::Matrix{Bool}, color::Vecto
   x = round(Int, cx - size(mask, 1) / 2)
   y = round(Int, cy - size(mask, 2) / 2)
   for dx in 1:size(mask, 1), dy in 1:size(mask, 2)
-    if mask[dx, dy] && 1 <= x + dx <= size(drawer.image, 1) && 1 <= y + dy <= size(drawer.image, 2)
-      drawer.image[x+dx, y+dy, :] = color
+    if mask[dx, dy] && 1 <= x + dx <= size(drawer.image, 2) && 1 <= y + dy <= size(drawer.image, 3)
+      drawer.image[:, x+dx, y+dy] = color
     end
   end
 end

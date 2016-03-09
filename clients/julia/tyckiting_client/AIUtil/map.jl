@@ -2,8 +2,8 @@ abstract AbstractMap
 
 # helper data type that contains a map of the world
 
-type Map
-  data::Matrix
+type Map{T}
+  data::Matrix{T}
   radius::Int
   function Map(data::Matrix, radius::Integer)
     diameter = 2radius + 1
@@ -14,12 +14,13 @@ type Map
 
 end
 
-world_radius(m::Map) = m.radius
-
 function Map(T::DataType, size::Integer, init = zero(T))
   diameter = 2size + 1
-  return Map( fill(init, (diameter, diameter)), size )
+  return Map{T}( fill(init, (diameter, diameter)), size )
 end
+
+ClientAI.map_area(m::Map) = circle(m.radius)
+ClientAI.radius(m::Map) = m.radius
 
 ##################################################
 #        indexing, get/set ops

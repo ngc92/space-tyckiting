@@ -37,3 +37,5 @@ end
 i = intersect(GeneralCircularArea(Position(1,0), 1), OriginCircularArea(1))
 @test collect(i) == [Position(0,0), Position(0,1), Position(1, -1), Position(1, 0)]
 
+@test length(collect(intersect(circle(Position(0,0), 2), circle(10)))) == length(collect(circle(Position(0,0), 2)))
+

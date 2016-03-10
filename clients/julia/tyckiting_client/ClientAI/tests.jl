@@ -1,4 +1,5 @@
-#using ClientAI
+include("ClientAI.jl")
+using ClientAI
 using Base.Test
 
 # Test basic coordinate type stuff

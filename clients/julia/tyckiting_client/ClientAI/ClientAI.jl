@@ -32,7 +32,7 @@ module ClientAI
 
   # actions
   export AbstractAction, MoveAction, RadarAction, CannonAction
-  export make_action, plan_actions, best_action
+  export make_action, plan_actions, best_action, randomize
 
   # bot functions
   export AbstractBot

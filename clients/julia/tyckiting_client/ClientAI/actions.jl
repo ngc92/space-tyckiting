@@ -52,10 +52,10 @@ immutable ActionPlan <: AbstractAction
   name::ASCIIString
   pos::Position
   rating::Float64 # rating of this action
-  function PosAction(name, pos, rating)
-		@assert name ∈ VALID_ACTIONS
-		new(name, pos, rating)
-	end
+  function ActionPlan(name, pos, rating)
+    @assert name ∈ VALID_ACTIONS
+    new(name, pos, rating)
+  end
 end
 botid(a::ActionPlan) = error("Action plans do not yet have an associated bot!")
 

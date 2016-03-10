@@ -1,4 +1,4 @@
-# Space Tyckiting Python client
+# Space Tyckiting Julia Client
 
 ![logo](logo.png)
 

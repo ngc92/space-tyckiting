@@ -1,6 +1,7 @@
 abstract AbstractAI
 
-# event dispatcher loop
+# event dispatcher loop: calls on event for all events
+# in an event vector
 function event_dispatch(ai, events::Vector{AbstractEvent})
   for event in events
     on_event(ai, event)
@@ -18,3 +19,7 @@ function on_event(ai::AbstractAI, event::AbstractEvent)
     warn("Event of type $(typeof(event)) not processed by $(typeof(ai))! Implement ClientAI.on_event")
   end
 end
+
+# filter out all dead bots
+filter_valid{T <: AbstractBot}(bots::Vector{T}) = filter(is_alive, bots)
+

@@ -32,10 +32,11 @@ module ClientAI
 
   # actions
   export AbstractAction, MoveAction, RadarAction, CannonAction
+  export make_action, plan_actions, best_action
 
   # bot functions
   export AbstractBot
-  export is_alive, team, name, hitpoints, make_action
+  export is_alive, team, name, hitpoints, filter_valid
 
   # grid functions
   export distance, radius, center, circle
